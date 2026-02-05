@@ -34,9 +34,6 @@ def load_data(csv_path: Path) -> pd.DataFrame:
 
 @st.cache_data
 def load_geojson(p: Path) -> dict:
-    raw = p.read_text(encoding="utf-8", errors="ignore")
-    st.write("GeoJSON bytes:", p.stat().st_size)
-    st.code(raw[:300])  # mira los primeros caracteres
 
     raw_strip = raw.lstrip()
     return json.loads(raw_strip)
