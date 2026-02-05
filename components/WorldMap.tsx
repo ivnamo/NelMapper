@@ -16,30 +16,39 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
 
   useEffect(() => {
     fetch("/countries.geojson")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status} cargando /countries.geojson`);
+        return r.json();
+      })
       .then(setGeojson)
-      .catch(() => setGeojson(null));
+      .catch((e) => {
+        console.error("GeoJSON load error:", e);
+        setGeojson(null);
+      });
   }, []);
 
-  const countriesSet = useMemo(() => new Set(countriesWithData.map((c) => c.toUpperCase())), [countriesWithData]);
+  const countriesSet = useMemo(
+    () => new Set(countriesWithData.map((c) => c.toUpperCase())),
+    [countriesWithData]
+  );
 
-  // Pintar países con data distinto + resaltar seleccionado
+  // Ojo: expresiones Mapbox/MapLibre
   const fillLayer: any = useMemo(
     () => ({
       id: "countries-fill",
       type: "fill",
       paint: {
-        "fill-opacity": [
-          "case",
-          ["==", ["get", "ISO3166-1-Alpha-3"], selectedIso3 ?? ""],
-          0.75,
-          0.25,
-        ],
         "fill-color": [
           "case",
           ["in", ["get", "ISO3166-1-Alpha-3"], ["literal", Array.from(countriesSet)]],
           "#2E86DE",
           "#D5D8DC",
+        ],
+        "fill-opacity": [
+          "case",
+          ["==", ["get", "ISO3166-1-Alpha-3"], selectedIso3 ?? ""],
+          0.75,
+          0.25,
         ],
       },
     }),
@@ -57,15 +66,16 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
       <Map
         ref={mapRef}
         initialViewState={{ longitude: 0, latitude: 20, zoom: 1.6 }}
-        // Estilo público (sin token). Si algún día cambiara, se sustituye por otro estilo OSM/Carto.
         mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        // IMPORTANTE: no dependas de e.features; usa queryRenderedFeatures
         onClick={(e) => {
-          const features = e.features || [];
-          const f = features.find((x: any) => x.layer?.id === "countries-fill" || x.layer?.id === "countries-line");
-          const iso3 = f?.properties?.["ISO3166-1-Alpha-3"];
+          const map = mapRef.current?.getMap();
+          if (!map) return;
+
+          const feats = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
+          const iso3 = feats?.[0]?.properties?.["ISO3166-1-Alpha-3"];
           if (iso3) onSelectIso3(String(iso3).toUpperCase());
         }}
-        interactiveLayerIds={["countries-fill", "countries-line"]}
       >
         {geojson && (
           <Source id="countries" type="geojson" data={geojson}>
