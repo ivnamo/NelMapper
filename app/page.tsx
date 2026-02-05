@@ -1,7 +1,15 @@
-import { loadAndGroupCsv } from "@/lib/parseCsv";
+import { loadAndGroupCsv, loadIso3ToCountryName } from "../lib/parseCsv";
 import ClientPage from "./ui";
 
 export default function Page() {
   const { grouped, countriesWithData } = loadAndGroupCsv();
-  return <ClientPage grouped={grouped} countriesWithData={countriesWithData} />;
+  const iso3ToName = loadIso3ToCountryName();
+
+  return (
+    <ClientPage
+      grouped={grouped}
+      countriesWithData={countriesWithData}
+      iso3ToName={iso3ToName}
+    />
+  );
 }
