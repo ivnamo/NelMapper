@@ -34,8 +34,6 @@ def load_data(csv_path: Path) -> pd.DataFrame:
 
 @st.cache_data
 def load_geojson(p: Path) -> dict:
-
-    raw_strip = raw.lstrip()
     return json.loads(raw_strip)
     with open(p, "r", encoding="utf-8") as f:
         return json.load(f)
