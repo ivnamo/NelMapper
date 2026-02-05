@@ -24,7 +24,8 @@ export default function DetailsPanel({
       ) : (
         Object.entries(distributors).map(([dist, items]) => (
           <details key={dist} style={{ marginTop: 10, border: "1px solid #e5e7eb", borderRadius: 10 }}>
-            <summary style={{ cursor: "pointer", padding: 12, fontWeight: 600 }}>
+            <summary style={{ cursor: "pointer", padding: 14, fontWeight: 700, fontSize: 15 }}>
+
               {dist} — {items.length} productos
             </summary>
             <div style={{ padding: 12, paddingTop: 0 }}>
