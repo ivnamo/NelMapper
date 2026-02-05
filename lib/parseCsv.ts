@@ -69,3 +69,20 @@ export function loadAndGroupCsv(): { grouped: Grouped; countriesWithData: string
 
   return { grouped, countriesWithData: Object.keys(grouped).sort() };
 }
+
+export function loadIso3ToCountryName(): Record<string, string> {
+  const geoPath = path.join(process.cwd(), "public", "countries.geojson");
+  const raw = fs.readFileSync(geoPath, "utf-8");
+  const geo = JSON.parse(raw);
+
+  const map: Record<string, string> = {};
+  for (const f of geo.features || []) {
+    const p = f.properties || {};
+    const iso3 = (p["ISO3166-1-Alpha-3"] || "").toUpperCase();
+    const name = p["name"];
+    if (iso3 && name) {
+      map[iso3] = name;
+    }
+  }
+  return map;
+}
