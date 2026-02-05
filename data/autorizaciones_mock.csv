@@ -1,0 +1,16 @@
+country_iso3,distributor,product,category
+DZA,Distribuidor 1,Producto A,Fertilizantes
+DZA,Distribuidor 1,Producto B,Fertilizantes
+DZA,Distribuidor 2,Producto C,Bioestimulantes
+DZA,Distribuidor 2,Producto D,Bioestimulantes
+MAR,Distribuidor 1,Producto A,Fertilizantes
+MAR,Distribuidor 3,Producto E,Correctores
+ESP,Distribuidor 4,Producto F,Fitosanitarios
+ESP,Distribuidor 4,Producto G,Fitosanitarios
+FRA,Distribuidor 2,Producto C,Bioestimulantes
+EGY,Distribuidor 5,Producto H,Fertilizantes
+SAU,Distribuidor 6,Producto I,Bioestimulantes
+ARE,Distribuidor 6,Producto I,Bioestimulantes
+ZAF,Distribuidor 7,Producto J,Correctores
+NGA,Distribuidor 8,Producto K,Fertilizantes
+TUR,Distribuidor 9,Producto L,Fertilizantes
