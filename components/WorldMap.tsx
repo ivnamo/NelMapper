@@ -152,6 +152,7 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
           border-radius: 12px;
           overflow: hidden;
           border: 1px solid #e5e7eb;
+          position: relative;
         }
         @media (min-width: 1024px) {
           .mapWrap {
