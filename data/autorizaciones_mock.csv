@@ -1,16 +1,59 @@
 country_iso3,distributor,product,category
 DZA,Distribuidor 1,Producto A,Fertilizantes
 DZA,Distribuidor 1,Producto B,Fertilizantes
+DZA,Distribuidor 1,Producto M,Bioestimulantes
 DZA,Distribuidor 2,Producto C,Bioestimulantes
 DZA,Distribuidor 2,Producto D,Bioestimulantes
+DZA,Distribuidor 2,Producto N,Correctores
+DZA,Distribuidor 10,Producto O,Fitosanitarios
+
 MAR,Distribuidor 1,Producto A,Fertilizantes
+MAR,Distribuidor 1,Producto P,Bioestimulantes
 MAR,Distribuidor 3,Producto E,Correctores
+MAR,Distribuidor 3,Producto Q,Fitosanitarios
+MAR,Distribuidor 11,Producto R,Fertilizantes
+
 ESP,Distribuidor 4,Producto F,Fitosanitarios
 ESP,Distribuidor 4,Producto G,Fitosanitarios
+ESP,Distribuidor 4,Producto S,Bioestimulantes
+ESP,Distribuidor 12,Producto T,Correctores
+ESP,Distribuidor 12,Producto U,Fertilizantes
+
 FRA,Distribuidor 2,Producto C,Bioestimulantes
+FRA,Distribuidor 2,Producto V,Bioestimulantes
+FRA,Distribuidor 13,Producto W,Fertilizantes
+FRA,Distribuidor 13,Producto X,Correctores
+
 EGY,Distribuidor 5,Producto H,Fertilizantes
+EGY,Distribuidor 5,Producto Y,Fertilizantes
+EGY,Distribuidor 14,Producto Z,Bioestimulantes
+
 SAU,Distribuidor 6,Producto I,Bioestimulantes
+SAU,Distribuidor 6,Producto AA,Correctores
+SAU,Distribuidor 15,Producto AB,Fertilizantes
+
 ARE,Distribuidor 6,Producto I,Bioestimulantes
+ARE,Distribuidor 6,Producto AC,Bioestimulantes
+ARE,Distribuidor 16,Producto AD,Fitosanitarios
+
 ZAF,Distribuidor 7,Producto J,Correctores
+ZAF,Distribuidor 7,Producto AE,Fertilizantes
+ZAF,Distribuidor 17,Producto AF,Bioestimulantes
+
 NGA,Distribuidor 8,Producto K,Fertilizantes
+NGA,Distribuidor 8,Producto AG,Fertilizantes
+NGA,Distribuidor 18,Producto AH,Correctores
+
 TUR,Distribuidor 9,Producto L,Fertilizantes
+TUR,Distribuidor 9,Producto AI,Bioestimulantes
+TUR,Distribuidor 19,Producto AJ,Correctores
+
+KEN,Distribuidor 20,Producto AK,Fertilizantes
+KEN,Distribuidor 20,Producto AL,Bioestimulantes
+
+GHA,Distribuidor 21,Producto AM,Fertilizantes
+GHA,Distribuidor 21,Producto AN,Correctores
+
+ETH,Distribuidor 22,Producto AO,Bioestimulantes
+ETH,Distribuidor 22,Producto AP,Fertilizantes
+
