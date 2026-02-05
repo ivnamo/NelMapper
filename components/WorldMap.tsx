@@ -98,21 +98,35 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
         ref={mapRef}
         initialViewState={{ longitude: 0, latitude: 20, zoom: 1.6 }}
         mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+      
+        onMouseMove={(e) => {
+          const map = mapRef.current?.getMap();
+          if (!map) return;
+      
+          const feats = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
+          map.getCanvas().style.cursor = feats.length ? "pointer" : "";
+        }}
+      
+        onMouseLeave={() => {
+          const map = mapRef.current?.getMap();
+          if (!map) return;
+          map.getCanvas().style.cursor = "";
+        }}
+      
         onClick={(e) => {
           const map = mapRef.current?.getMap();
           if (!map) return;
-        
+      
           const feats = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
           const f = feats?.[0] as any;
           const iso3 = f?.properties?.["ISO3166-1-Alpha-3"];
           if (!iso3) return;
-        
+      
           const iso3Up = String(iso3).toUpperCase();
           onSelectIso3(iso3Up);
-        
+      
           const bbox = getFeatureBBox(f);
           if (bbox) {
-            // padding más grande en móvil
             const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
             map.fitBounds(bbox, {
               padding: isMobile ? 20 : 60,
@@ -122,6 +136,7 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
           }
         }}
       >
+
         {geojson && (
           <Source id="countries" type="geojson" data={geojson}>
             <Layer {...fillLayer} />
