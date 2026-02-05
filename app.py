@@ -37,7 +37,7 @@ def build_map(geojson: dict, countries_with_data: set[str]) -> folium.Map:
     m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB positron")
 
     def style_fn(feature):
-        iso3 = (feature.get("properties", {}).get("ISO_A3") or "").upper()
+        iso3 = (feature.get("properties", {}).get("ISO3166-1-Alpha-3") or "").upper()
         has_data = iso3 in countries_with_data
         return {
             "fillColor": "#2E86DE" if has_data else "#D5D8DC",
@@ -55,7 +55,7 @@ def build_map(geojson: dict, countries_with_data: set[str]) -> folium.Map:
         style_function=style_fn,
         highlight_function=highlight_fn,
         tooltip=folium.GeoJsonTooltip(
-            fields=["ADMIN", "ISO_A3"],
+            fields=["name", "ISO3166-1-Alpha-3"],
             aliases=["País", "ISO3"],
             sticky=False,
         ),
@@ -67,14 +67,12 @@ def build_map(geojson: dict, countries_with_data: set[str]) -> folium.Map:
 
     return m
 
-
 def extract_clicked_iso3(map_state: dict) -> str | None:
-    # streamlit-folium devuelve info de la última feature clicada en "last_active_drawing"
     lad = map_state.get("last_active_drawing")
     if not lad:
         return None
     props = lad.get("properties") or {}
-    iso3 = props.get("ISO_A3")
+    iso3 = props.get("ISO3166-1-Alpha-3")
     if isinstance(iso3, str) and iso3.strip():
         return iso3.strip().upper()
     return None
