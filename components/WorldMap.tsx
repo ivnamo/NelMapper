@@ -10,6 +10,38 @@ type Props = {
   onSelectIso3: (iso3: string) => void;
 };
 
+function getFeatureBBox(feature: any): [[number, number], [number, number]] | null {
+  const geom = feature?.geometry;
+  if (!geom) return null;
+
+  let minLon = Infinity, minLat = Infinity, maxLon = -Infinity, maxLat = -Infinity;
+
+  const visitCoord = (c: any) => {
+    const lon = c?.[0];
+    const lat = c?.[1];
+    if (typeof lon !== "number" || typeof lat !== "number") return;
+    minLon = Math.min(minLon, lon);
+    minLat = Math.min(minLat, lat);
+    maxLon = Math.max(maxLon, lon);
+    maxLat = Math.max(maxLat, lat);
+  };
+
+  const walk = (coords: any) => {
+    if (!coords) return;
+    if (typeof coords[0] === "number" && typeof coords[1] === "number") {
+      visitCoord(coords);
+      return;
+    }
+    for (const x of coords) walk(x);
+  };
+
+  walk(geom.coordinates);
+
+  if (!isFinite(minLon) || !isFinite(minLat) || !isFinite(maxLon) || !isFinite(maxLat)) return null;
+  return [[minLon, minLat], [maxLon, maxLat]];
+}
+
+
 export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3 }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [geojson, setGeojson] = useState<any>(null);
@@ -69,10 +101,25 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
         onClick={(e) => {
           const map = mapRef.current?.getMap();
           if (!map) return;
-
+        
           const feats = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
-          const iso3 = feats?.[0]?.properties?.["ISO3166-1-Alpha-3"];
-          if (iso3) onSelectIso3(String(iso3).toUpperCase());
+          const f = feats?.[0] as any;
+          const iso3 = f?.properties?.["ISO3166-1-Alpha-3"];
+          if (!iso3) return;
+        
+          const iso3Up = String(iso3).toUpperCase();
+          onSelectIso3(iso3Up);
+        
+          const bbox = getFeatureBBox(f);
+          if (bbox) {
+            // padding más grande en móvil
+            const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+            map.fitBounds(bbox, {
+              padding: isMobile ? 20 : 60,
+              duration: 900,
+              maxZoom: 5.2,
+            });
+          }
         }}
       >
         {geojson && (
