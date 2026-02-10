@@ -27,30 +27,35 @@ export default function CountryList({
           const distObj = grouped[iso3];
           if (!distObj) return null;
 
-          // Filtrar distribuidores según el filtro
+          // Filtrar distribuidores según el filtro activo
           const distEntries = Object.entries(distObj).filter(([dist]) =>
             selectedDistributor ? dist === selectedDistributor : true
           );
 
           return (
             <div key={iso3} style={{ marginBottom: 16 }}>
+              {/* Nombre del país */}
               <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
                 {iso3ToName[iso3] ?? iso3}
               </div>
+              {/* Si no hay distribuidores tras aplicar el filtro */}
               {distEntries.length === 0 ? (
                 <div style={{ fontSize: 13, color: "#6b7280" }}>
                   No hay autorizaciones para este país.
                 </div>
               ) : (
                 distEntries.map(([dist, items]) => {
-                  // Filtrar productos según el filtro
+                  // Filtrar productos según el filtro activo
                   const filteredItems = selectedProduct
                     ? items.filter((item) => item.product === selectedProduct)
                     : items;
                   if (!filteredItems.length) return null;
 
                   return (
-                    <details key={dist} style={{ marginTop: 8, border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                    <details
+                      key={dist}
+                      style={{ marginTop: 8, border: "1px solid #e5e7eb", borderRadius: 8 }}
+                    >
                       <summary style={{ cursor: "pointer", padding: 12, fontWeight: 700 }}>
                         {dist} — {filteredItems.length} productos
                       </summary>
