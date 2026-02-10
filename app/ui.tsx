@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import WorldMap from "@/components/WorldMap";
 import DetailsPanel from "@/components/DetailsPanel";
 import FilterPanel from "@/components/FilterPanel";
