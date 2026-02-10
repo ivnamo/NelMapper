@@ -114,7 +114,9 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
     if (!map || !isReady) return null;
 
     // Query robusto: consulta todo, filtra por source id "countries"
-    const feats = map.queryRenderedFeatures(point) as any[];
+    //const feats = map.queryRenderedFeatures(point) as any[];
+    const feats = map.queryRenderedFeatures([point.x, point.y]) as any[];
+
     const fromCountries = feats.filter((f) => f?.source === "countries");
 
     // Coge el primero con iso3 válido
