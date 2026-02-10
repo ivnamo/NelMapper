@@ -16,6 +16,9 @@ export default function ClientPage({
   iso3ToName: Record<string, string>;
 }) {
   const [selectedIso3, setSelectedIso3] = useState<string | null>(countriesWithData[0] ?? null);
+  console.log("countriesWithData", countriesWithData?.slice?.(0, 20), "len=", countriesWithData?.length);
+  console.log("grouped keys", Object.keys(grouped || {}).slice(0, 20), "len=", Object.keys(grouped || {}).length);
+
 
   return (
     <main style={{ padding: 16 }}>
