@@ -1,6 +1,5 @@
+// components/FilterPanel.tsx
 "use client";
-
-type Grouped = Record<string, Record<string, { product: string; category: string }[]>>;
 
 export default function FilterPanel({
   uniqueDistributors,
@@ -11,8 +10,6 @@ export default function FilterPanel({
   setSelectedProduct,
   totalDistributors,
   totalProducts,
-  filteredCountries,
-  iso3ToName,
 }: {
   uniqueDistributors: string[];
   uniqueProducts: string[];
@@ -22,12 +19,10 @@ export default function FilterPanel({
   setSelectedProduct: (s: string) => void;
   totalDistributors: number;
   totalProducts: number;
-  filteredCountries: string[];
-  iso3ToName: Record<string, string>;
 }) {
   return (
     <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 16 }}>
-      {/* Filtros */}
+      {/* Select Distribuidor */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, color: "#6b7280" }}>Distribuidor</div>
         <select
@@ -44,6 +39,7 @@ export default function FilterPanel({
         </select>
       </div>
 
+      {/* Select Producto */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, color: "#6b7280" }}>Producto</div>
         <select
@@ -61,7 +57,7 @@ export default function FilterPanel({
       </div>
 
       {/* Indicadores */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 12 }}>
         <div style={{ flex: 1, background: "#f9fafb", borderRadius: 8, padding: 12 }}>
           <div style={{ fontSize: 12, color: "#6b7280" }}>Distribuidores</div>
           <div style={{ fontSize: 22, fontWeight: 700 }}>{totalDistributors}</div>
@@ -70,26 +66,6 @@ export default function FilterPanel({
           <div style={{ fontSize: 12, color: "#6b7280" }}>Productos</div>
           <div style={{ fontSize: 22, fontWeight: 700 }}>{totalProducts}</div>
         </div>
-      </div>
-
-      {/* Listado de países */}
-      <div>
-        <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 4 }}>
-          Países ({filteredCountries.length})
-        </div>
-        {filteredCountries.length === 0 ? (
-          <div style={{ fontSize: 13, color: "#6b7280" }}>
-            No hay países que cumplan esta combinación.
-          </div>
-        ) : (
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
-            {filteredCountries.map((iso3) => (
-              <li key={iso3} style={{ fontSize: 13 }}>
-                {iso3ToName[iso3] ?? iso3}
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </div>
   );
