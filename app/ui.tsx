@@ -17,26 +17,26 @@ export default function ClientPage({
   countriesWithData: string[];
   iso3ToName: Record<string, string>;
 }) {
-  // Estado de selección para país (clicado en el mapa) y filtros
+  // Estado de selección del mapa y filtros
   const [selectedIso3, setSelectedIso3] = useState<string | null>(null);
   const [selectedDistributor, setSelectedDistributor] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
 
-  // Al cambiar filtros, borramos la selección de país
+  // Si cambia algún filtro, limpiamos la selección de país
   useEffect(() => {
     setSelectedIso3(null);
   }, [selectedDistributor, selectedProduct]);
 
-  // Distribuidores únicos para opciones del selector
+  // Distribuidores únicos globales
   const uniqueDistributors = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
-      Object.keys(distObj).forEach((d) => s.add(d));
+      Object.keys(distObj).forEach((dist) => s.add(dist));
     });
     return Array.from(s).sort();
   }, [grouped]);
 
-  // Productos únicos para opciones del selector
+  // Productos únicos globales
   const uniqueProducts = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -47,15 +47,13 @@ export default function ClientPage({
     return Array.from(s).sort();
   }, [grouped]);
 
-  // Países que cumplen con los filtros (sin tener en cuenta selección del mapa)
+  // Países que cumplen los filtros activos (para colorear el mapa)
   const filteredCountries = useMemo(() => {
     return Object.keys(grouped)
       .filter((iso3) => {
         const distObj = grouped[iso3];
         return Object.entries(distObj).some(([dist, items]) => {
-          // Filtro de distribuidor
           if (selectedDistributor && dist !== selectedDistributor) return false;
-          // Filtro de producto
           if (selectedProduct) {
             return items.some((it) => it.product === selectedProduct);
           }
@@ -65,29 +63,46 @@ export default function ClientPage({
       .sort();
   }, [grouped, selectedDistributor, selectedProduct]);
 
-  // Países a mostrar en el listado (cuando se selecciona un país, sólo ese)
+  // Lista de países a mostrar: uno (si hay seleccionado) o todos los filtrados
   const displayCountries = useMemo(() => {
     return selectedIso3 ? [selectedIso3] : filteredCountries;
   }, [selectedIso3, filteredCountries]);
 
-  // Recuento dinámico de distribuidores y productos según filtros y selección
+  // Recuento dinámico de distribuidores y productos deduplicados
   const { distCount, prodCount } = useMemo(() => {
-    const distSet = new Set<string>();
-    const prodSet = new Set<string>();
-    displayCountries.forEach((iso3) => {
+    // Sin filtros ni país seleccionado → totales globales
+    if (!selectedIso3 && !selectedDistributor && !selectedProduct) {
+      return {
+        distCount: uniqueDistributors.length,
+        prodCount: uniqueProducts.length,
+      };
+    }
+    // En caso contrario, calcula sobre países filtrados
+    const dSet = new Set<string>();
+    const pSet = new Set<string>();
+    const isoList = selectedIso3 ? [selectedIso3] : filteredCountries;
+    isoList.forEach((iso3) => {
       const distObj = grouped[iso3];
       if (!distObj) return;
       Object.entries(distObj).forEach(([dist, items]) => {
         if (selectedDistributor && dist !== selectedDistributor) return;
         items.forEach(({ product }) => {
           if (selectedProduct && product !== selectedProduct) return;
-          distSet.add(dist);
-          prodSet.add(product);
+          dSet.add(dist);
+          pSet.add(product);
         });
       });
     });
-    return { distCount: distSet.size, prodCount: prodSet.size };
-  }, [grouped, displayCountries, selectedDistributor, selectedProduct]);
+    return { distCount: dSet.size, prodCount: pSet.size };
+  }, [
+    grouped,
+    selectedIso3,
+    selectedDistributor,
+    selectedProduct,
+    filteredCountries,
+    uniqueDistributors,
+    uniqueProducts,
+  ]);
 
   return (
     <main style={{ padding: 16 }}>
@@ -126,7 +141,7 @@ export default function ClientPage({
         </div>
       </div>
 
-      {/* Listado de países y detalles, bajo el mapa */}
+      {/* Listado de países y detalles bajo el mapa */}
       <div style={{ marginTop: 20 }}>
         <CountryList
           grouped={grouped}
