@@ -52,6 +52,8 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
       })
       .then((g) => {
         // Normaliza a properties.iso3 (solo A-Z{3}, ignora -99)
+        
+        
         const candidates = ["ISO3166-1-Alpha-3", "ISO_A3", "ADM0_A3", "iso_a3"];
         for (const f of g.features || []) {
           const p = f.properties || {};
@@ -66,6 +68,9 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
           p.iso3 = iso;
           f.properties = p;
         }
+        const fr = (g.features || []).find((f: any) => (f?.properties?.name || "").toLowerCase() === "france");
+        console.log("FRANCE feature properties:", fr?.properties);
+
         setGeojson(g);
       })
       .catch((e) => {
