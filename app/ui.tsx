@@ -1,12 +1,12 @@
+// app/ui.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import WorldMap from "@/components/WorldMap";
-import DetailsPanel from "@/components/DetailsPanel";
 import FilterPanel from "@/components/FilterPanel";
+import CountryList from "@/components/CountryList";
 
 type Grouped = Record<string, Record<string, { product: string; category: string }[]>>;
-
 
 export default function ClientPage({
   grouped,
@@ -18,9 +18,14 @@ export default function ClientPage({
   iso3ToName: Record<string, string>;
 }) {
   const ALL = "";
-  const [selectedIso3, setSelectedIso3] = useState<string | null>(countriesWithData[0] ?? null);
+  const [selectedIso3, setSelectedIso3] = useState<string | null>(null);
   const [selectedDistributor, setSelectedDistributor] = useState<string>(ALL);
   const [selectedProduct, setSelectedProduct] = useState<string>(ALL);
+
+  // Reiniciar selección de país cuando cambian los filtros
+  useEffect(() => {
+    setSelectedIso3(null);
+  }, [selectedDistributor, selectedProduct]);
 
   // Distribuidores únicos
   const uniqueDistributors = useMemo(() => {
@@ -44,28 +49,37 @@ export default function ClientPage({
 
   // Países que cumplen filtros
   const filteredCountries = useMemo(() => {
-    return Object.keys(grouped).filter((iso3) => {
-      const distObj = grouped[iso3];
-      return Object.entries(distObj).some(([dist, items]) => {
-        // Si hay filtro de distribuidor, comprueba
-        if (selectedDistributor && dist !== selectedDistributor) return false;
-        // Si hay filtro de producto, comprueba
-        if (selectedProduct) {
-          return items.some((it) => it.product === selectedProduct);
-        }
-        return true;
-      });
-    }).sort();
+    return Object.keys(grouped)
+      .filter((iso3) => {
+        const distObj = grouped[iso3];
+        return Object.entries(distObj).some(([dist, items]) => {
+          // Filtrar distribuidor
+          if (selectedDistributor && dist !== selectedDistributor) return false;
+          // Filtrar producto
+          if (selectedProduct) {
+            return items.some((it) => it.product === selectedProduct);
+          }
+          return true;
+        });
+      })
+      .sort();
   }, [grouped, selectedDistributor, selectedProduct]);
+
+  // Lista de países a mostrar: si hay un país seleccionado en el mapa, solo ese; si no, todos los filtrados
+  const displayCountries = useMemo(() => {
+    return selectedIso3 ? [selectedIso3] : filteredCountries;
+  }, [selectedIso3, filteredCountries]);
 
   const totalDistributors = uniqueDistributors.length;
   const totalProducts = uniqueProducts.length;
 
-  // Cambia el listado de países resaltados en el mapa: usa filteredCountries para destacar
   return (
     <main style={{ padding: 16 }}>
-      <h1 style={{ margin: 0, marginBottom: 12, fontSize: 28 }}>Mapa de autorizaciones</h1>
-      <div className="layout" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+      <h1 style={{ margin: 0, marginBottom: 12, fontSize: 28 }}>
+        Mapa de autorizaciones
+      </h1>
+      {/* Layout principal: mapa y panel lateral */}
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 320 }}>
           <WorldMap
             countriesWithData={filteredCountries}
@@ -73,7 +87,15 @@ export default function ClientPage({
             onSelectIso3={setSelectedIso3}
           />
         </div>
-        <div style={{ width: 380, minWidth: 280, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div
+          style={{
+            width: 380,
+            minWidth: 280,
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
           <FilterPanel
             uniqueDistributors={uniqueDistributors}
             uniqueProducts={uniqueProducts}
@@ -83,17 +105,20 @@ export default function ClientPage({
             setSelectedProduct={setSelectedProduct}
             totalDistributors={totalDistributors}
             totalProducts={totalProducts}
-            filteredCountries={filteredCountries}
-            iso3ToName={iso3ToName}
-          />
-          <DetailsPanel
-            grouped={grouped}
-            selectedIso3={selectedIso3}
-            iso3ToName={iso3ToName}
           />
         </div>
+      </div>
+
+      {/* Listado de países y detalles */}
+      <div style={{ marginTop: 20 }}>
+        <CountryList
+          grouped={grouped}
+          iso3ToName={iso3ToName}
+          displayCountries={displayCountries}
+          selectedDistributor={selectedDistributor}
+          selectedProduct={selectedProduct}
+        />
       </div>
     </main>
   );
 }
-
