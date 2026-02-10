@@ -22,7 +22,7 @@ export default function FilterPanel({
 }) {
   return (
     <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 16 }}>
-      {/* Select Distribuidor */}
+      {/* Selector de distribuidor */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, color: "#6b7280" }}>Distribuidor</div>
         <select
@@ -39,7 +39,7 @@ export default function FilterPanel({
         </select>
       </div>
 
-      {/* Select Producto */}
+      {/* Selector de producto */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, color: "#6b7280" }}>Producto</div>
         <select
@@ -56,7 +56,7 @@ export default function FilterPanel({
         </select>
       </div>
 
-      {/* Indicadores */}
+      {/* Indicadores (recuento dinámico) */}
       <div style={{ display: "flex", gap: 12 }}>
         <div style={{ flex: 1, background: "#f9fafb", borderRadius: 8, padding: 12 }}>
           <div style={{ fontSize: 12, color: "#6b7280" }}>Distribuidores</div>
