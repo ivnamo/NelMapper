@@ -17,18 +17,17 @@ export default function ClientPage({
   countriesWithData: string[];
   iso3ToName: Record<string, string>;
 }) {
-  // Estado para país seleccionado (clic en mapa)
+  // Estado de selección para país (clicado en el mapa) y filtros
   const [selectedIso3, setSelectedIso3] = useState<string | null>(null);
-  // Estado para filtros
   const [selectedDistributor, setSelectedDistributor] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
 
-  // Reiniciar la selección de país cuando cambien los filtros
+  // Al cambiar filtros, borramos la selección de país
   useEffect(() => {
     setSelectedIso3(null);
   }, [selectedDistributor, selectedProduct]);
 
-  // Distribuidores únicos (para los selectores)
+  // Distribuidores únicos para opciones del selector
   const uniqueDistributors = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -37,7 +36,7 @@ export default function ClientPage({
     return Array.from(s).sort();
   }, [grouped]);
 
-  // Productos únicos (para los selectores)
+  // Productos únicos para opciones del selector
   const uniqueProducts = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -48,7 +47,7 @@ export default function ClientPage({
     return Array.from(s).sort();
   }, [grouped]);
 
-  // Países que cumplen con los filtros (para colorear en el mapa)
+  // Países que cumplen con los filtros (sin tener en cuenta selección del mapa)
   const filteredCountries = useMemo(() => {
     return Object.keys(grouped)
       .filter((iso3) => {
@@ -66,14 +65,12 @@ export default function ClientPage({
       .sort();
   }, [grouped, selectedDistributor, selectedProduct]);
 
-  // Países a mostrar en el listado de abajo:
-  //  - si se ha seleccionado un país en el mapa, ese solo
-  //  - si no, todos los países filtrados
+  // Países a mostrar en el listado (cuando se selecciona un país, sólo ese)
   const displayCountries = useMemo(() => {
     return selectedIso3 ? [selectedIso3] : filteredCountries;
   }, [selectedIso3, filteredCountries]);
 
-  // Recuento dinámico de distribuidores y productos según el contexto
+  // Recuento dinámico de distribuidores y productos según filtros y selección
   const { distCount, prodCount } = useMemo(() => {
     const distSet = new Set<string>();
     const prodSet = new Set<string>();
@@ -81,9 +78,7 @@ export default function ClientPage({
       const distObj = grouped[iso3];
       if (!distObj) return;
       Object.entries(distObj).forEach(([dist, items]) => {
-        // Aplicar filtro de distribuidor
         if (selectedDistributor && dist !== selectedDistributor) return;
-        // Aplicar filtro de producto y contar distribuidores/productos únicos
         items.forEach(({ product }) => {
           if (selectedProduct && product !== selectedProduct) return;
           distSet.add(dist);
@@ -94,19 +89,14 @@ export default function ClientPage({
     return { distCount: distSet.size, prodCount: prodSet.size };
   }, [grouped, displayCountries, selectedDistributor, selectedProduct]);
 
-  // Pasamos los recuentos dinámicos al panel de filtros
-  const totalDistributors = distCount;
-  const totalProducts = prodCount;
-
   return (
     <main style={{ padding: 16 }}>
       <h1 style={{ margin: 0, marginBottom: 12, fontSize: 28 }}>
         Mapa de autorizaciones
       </h1>
 
-      {/* Sección superior: mapa y filtros */}
+      {/* Distribución en dos columnas: Mapa a la izquierda, filtros a la derecha */}
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-        {/* Mapa */}
         <div style={{ flex: 1, minWidth: 320 }}>
           <WorldMap
             countriesWithData={filteredCountries}
@@ -114,7 +104,6 @@ export default function ClientPage({
             onSelectIso3={setSelectedIso3}
           />
         </div>
-        {/* Panel de filtros */}
         <div
           style={{
             width: 380,
@@ -131,13 +120,13 @@ export default function ClientPage({
             setSelectedDistributor={setSelectedDistributor}
             selectedProduct={selectedProduct}
             setSelectedProduct={setSelectedProduct}
-            totalDistributors={totalDistributors}
-            totalProducts={totalProducts}
+            totalDistributors={distCount}
+            totalProducts={prodCount}
           />
         </div>
       </div>
 
-      {/* Listado de países y detalles, debajo del mapa */}
+      {/* Listado de países y detalles, bajo el mapa */}
       <div style={{ marginTop: 20 }}>
         <CountryList
           grouped={grouped}
