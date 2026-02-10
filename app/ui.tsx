@@ -1,7 +1,7 @@
 // app/ui.tsx
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import WorldMap from "@/components/WorldMap";
 import FilterPanel from "@/components/FilterPanel";
 import CountryList from "@/components/CountryList";
@@ -22,12 +22,7 @@ export default function ClientPage({
   const [selectedDistributor, setSelectedDistributor] = useState<string>(ALL);
   const [selectedProduct, setSelectedProduct] = useState<string>(ALL);
 
-  // Reiniciar selección de país cuando cambian los filtros
-  useEffect(() => {
-    setSelectedIso3(null);
-  }, [selectedDistributor, selectedProduct]);
-
-  // Distribuidores únicos
+  // Opciones únicas sin filtrar (siguen igual)
   const uniqueDistributors = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -36,7 +31,6 @@ export default function ClientPage({
     return Array.from(s).sort();
   }, [grouped]);
 
-  // Productos únicos
   const uniqueProducts = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -53,9 +47,7 @@ export default function ClientPage({
       .filter((iso3) => {
         const distObj = grouped[iso3];
         return Object.entries(distObj).some(([dist, items]) => {
-          // Filtrar distribuidor
           if (selectedDistributor && dist !== selectedDistributor) return false;
-          // Filtrar producto
           if (selectedProduct) {
             return items.some((it) => it.product === selectedProduct);
           }
@@ -65,20 +57,41 @@ export default function ClientPage({
       .sort();
   }, [grouped, selectedDistributor, selectedProduct]);
 
-  // Lista de países a mostrar: si hay un país seleccionado en el mapa, solo ese; si no, todos los filtrados
+  // Países que se muestran (si se selecciona un país, solo ese; si no, todos los filtrados)
   const displayCountries = useMemo(() => {
     return selectedIso3 ? [selectedIso3] : filteredCountries;
   }, [selectedIso3, filteredCountries]);
 
-  const totalDistributors = uniqueDistributors.length;
-  const totalProducts = uniqueProducts.length;
+  // === NUEVO: recálculo dinámico de distribuidores y productos ===
+  const { distCount, prodCount } = useMemo(() => {
+    const distSet = new Set<string>();
+    const prodSet = new Set<string>();
 
+    displayCountries.forEach((iso3) => {
+      const distObj = grouped[iso3];
+      if (!distObj) return;
+      for (const [dist, items] of Object.entries(distObj)) {
+        // Filtrar distribuidor si está seleccionado
+        if (selectedDistributor && dist !== selectedDistributor) continue;
+        // Filtrar productos si se ha seleccionado uno concreto
+        items.forEach(({ product }) => {
+          if (selectedProduct && product !== selectedProduct) return;
+          distSet.add(dist);
+          prodSet.add(product);
+        });
+      }
+    });
+
+    return { distCount: distSet.size, prodCount: prodSet.size };
+  }, [grouped, displayCountries, selectedDistributor, selectedProduct]);
+
+  // Pasa estos contadores al panel de filtros
   return (
     <main style={{ padding: 16 }}>
       <h1 style={{ margin: 0, marginBottom: 12, fontSize: 28 }}>
         Mapa de autorizaciones
       </h1>
-      {/* Layout principal: mapa y panel lateral */}
+
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 320 }}>
           <WorldMap
@@ -103,13 +116,12 @@ export default function ClientPage({
             setSelectedDistributor={setSelectedDistributor}
             selectedProduct={selectedProduct}
             setSelectedProduct={setSelectedProduct}
-            totalDistributors={totalDistributors}
-            totalProducts={totalProducts}
+            totalDistributors={distCount}  {/* ahora dinámico */}
+            totalProducts={prodCount}      {/* ahora dinámico */}
           />
         </div>
       </div>
 
-      {/* Listado de países y detalles */}
       <div style={{ marginTop: 20 }}>
         <CountryList
           grouped={grouped}
