@@ -22,7 +22,7 @@ export default function ClientPage({
   const [selectedDistributor, setSelectedDistributor] = useState<string>(ALL);
   const [selectedProduct, setSelectedProduct] = useState<string>(ALL);
 
-  // Opciones únicas sin filtrar (siguen igual)
+  // Obtener distribuidores únicos
   const uniqueDistributors = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -31,6 +31,7 @@ export default function ClientPage({
     return Array.from(s).sort();
   }, [grouped]);
 
+  // Obtener productos únicos
   const uniqueProducts = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -57,35 +58,35 @@ export default function ClientPage({
       .sort();
   }, [grouped, selectedDistributor, selectedProduct]);
 
-  // Países que se muestran (si se selecciona un país, solo ese; si no, todos los filtrados)
+  // Países a mostrar: uno (si hay seleccionado) o todos los filtrados
   const displayCountries = useMemo(() => {
     return selectedIso3 ? [selectedIso3] : filteredCountries;
   }, [selectedIso3, filteredCountries]);
 
-  // === NUEVO: recálculo dinámico de distribuidores y productos ===
+  // Cálculo dinámico de distribuidores y productos según selección/filtros
   const { distCount, prodCount } = useMemo(() => {
     const distSet = new Set<string>();
     const prodSet = new Set<string>();
-
     displayCountries.forEach((iso3) => {
       const distObj = grouped[iso3];
       if (!distObj) return;
-      for (const [dist, items] of Object.entries(distObj)) {
-        // Filtrar distribuidor si está seleccionado
-        if (selectedDistributor && dist !== selectedDistributor) continue;
-        // Filtrar productos si se ha seleccionado uno concreto
+      Object.entries(distObj).forEach(([dist, items]) => {
+        if (selectedDistributor && dist !== selectedDistributor) return;
         items.forEach(({ product }) => {
           if (selectedProduct && product !== selectedProduct) return;
           distSet.add(dist);
           prodSet.add(product);
         });
-      }
+      });
     });
-
     return { distCount: distSet.size, prodCount: prodSet.size };
   }, [grouped, displayCountries, selectedDistributor, selectedProduct]);
 
-  // Pasa estos contadores al panel de filtros
+  // Asignamos los contadores dinámicos a las props esperadas por FilterPanel
+  const totalDistributors = distCount;
+  const totalProducts = prodCount;
+
+  // A partir de aquí cerramos todos los scopes antes del return
   return (
     <main style={{ padding: 16 }}>
       <h1 style={{ margin: 0, marginBottom: 12, fontSize: 28 }}>
@@ -116,8 +117,8 @@ export default function ClientPage({
             setSelectedDistributor={setSelectedDistributor}
             selectedProduct={selectedProduct}
             setSelectedProduct={setSelectedProduct}
-            totalDistributors={distCount}  {/* ahora dinámico */}
-            totalProducts={prodCount}      {/* ahora dinámico */}
+            totalDistributors={totalDistributors}
+            totalProducts={totalProducts}
           />
         </div>
       </div>
