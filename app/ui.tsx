@@ -8,6 +8,15 @@ import CountryList from "@/components/CountryList";
 
 type Grouped = Record<string, Record<string, { product: string; category: string }[]>>;
 
+// Función para normalizar textos: quita tildes, recorta espacios y pasa a minúsculas
+function normalizeStr(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // elimina tildes
+    .trim()
+    .toLowerCase();
+}
+
 export default function ClientPage({
   grouped,
   countriesWithData,
@@ -22,56 +31,58 @@ export default function ClientPage({
   const [selectedDistributor, setSelectedDistributor] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
 
-  // Al cambiar filtros, limpiar selección de país
+  // Al cambiar filtros, limpiar la selección del mapa
   useEffect(() => {
     setSelectedIso3(null);
   }, [selectedDistributor, selectedProduct]);
 
-  // Distribuidores únicos (para opciones)
+  /**
+   * Listas de distribuidores y productos.
+   * En esta opción se guardan como nombres *normalizados* para que
+   * las comparaciones y los recuentos no se dupliquen por tildes o mayúsculas.
+   * Si prefieres mostrar los nombres originales en los <select>, puedes adaptar
+   * FilterPanel para aceptar objetos { normalized, display } en lugar de strings.
+   */
   const uniqueDistributors = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
-      Object.keys(distObj).forEach((dist) => s.add(dist));
-    });
-    return Array.from(s).sort();
-  }, [grouped]);
-
-  // Productos únicos (para opciones)
-  const uniqueProducts = useMemo(() => {
-    const s = new Set<string>();
-    Object.values(grouped).forEach((distObj) => {
-      Object.values(distObj).forEach((items) => {
-        items.forEach(({ product }) => s.add(product));
+      Object.keys(distObj).forEach((dist) => {
+        const normalized = normalizeStr(dist);
+        s.add(normalized);
       });
     });
     return Array.from(s).sort();
   }, [grouped]);
 
-  /**
-   * Normalizar los valores de los filtros:
-   *  - Si el valor es "", "Todos" o "todos", lo tratamos como sin filtro (cadena vacía).
-   */
-  const normalizedDistributor =
-    !selectedDistributor ||
-    selectedDistributor.toLowerCase() === "todos"
-      ? ""
-      : selectedDistributor;
-  const normalizedProduct =
-    !selectedProduct || selectedProduct.toLowerCase() === "todos"
-      ? ""
-      : selectedProduct;
+  const uniqueProducts = useMemo(() => {
+    const s = new Set<string>();
+    Object.values(grouped).forEach((distObj) => {
+      Object.values(distObj).forEach((items) => {
+        items.forEach(({ product }) => {
+          const normalized = normalizeStr(product);
+          s.add(normalized);
+        });
+      });
+    });
+    return Array.from(s).sort();
+  }, [grouped]);
 
-  // Países que cumplen los filtros normalizados
+  // Normalizamos los filtros seleccionados para compararlos después
+  const normalizedDistributor = selectedDistributor || "";
+  const normalizedProduct = selectedProduct || "";
+
+  // Países que cumplen con los filtros (normalizados)
   const filteredCountries = useMemo(() => {
     return Object.keys(grouped)
       .filter((iso3) => {
         const distObj = grouped[iso3];
         return Object.entries(distObj).some(([dist, items]) => {
-          // Si hay filtro de distribuidor y no coincide, descartar
-          if (normalizedDistributor && dist !== normalizedDistributor) return false;
-          // Si hay filtro de producto y no aparece en este distribuidor, descartar
+          const distNorm = normalizeStr(dist);
+          // Filtro de distribuidor
+          if (normalizedDistributor && distNorm !== normalizedDistributor) return false;
+          // Filtro de producto
           if (normalizedProduct) {
-            return items.some((it) => it.product === normalizedProduct);
+            return items.some((it) => normalizeStr(it.product) === normalizedProduct);
           }
           return true;
         });
@@ -79,26 +90,23 @@ export default function ClientPage({
       .sort();
   }, [grouped, normalizedDistributor, normalizedProduct]);
 
-  // Países a mostrar: uno (seleccionado) o todos los filtrados
+  // Países a mostrar en la lista (si hay selección en el mapa, sólo ese)
   const displayCountries = useMemo(() => {
     return selectedIso3 ? [selectedIso3] : filteredCountries;
   }, [selectedIso3, filteredCountries]);
 
-  // Recuento dinámico con deduplicación y fallback a totales globales
+  // Recuento dinámico de distribuidores y productos (deduplicados)
   const { distCount, prodCount } = useMemo(() => {
-    // Caso sin país seleccionado ni filtros activos: mostrar totales únicos
-    if (
-      !selectedIso3 &&
-      !normalizedDistributor &&
-      !normalizedProduct
-    ) {
+    // Si no hay país seleccionado ni filtros activos, devolvemos
+    // directamente los tamaños de uniqueDistributors y uniqueProducts
+    if (!selectedIso3 && !normalizedDistributor && !normalizedProduct) {
       return {
         distCount: uniqueDistributors.length,
         prodCount: uniqueProducts.length,
       };
-    }
+      }
 
-    // De lo contrario, contar distribuidores y productos únicos en el subconjunto actual
+    // En caso contrario, contamos en el subconjunto filtrado
     const dSet = new Set<string>();
     const pSet = new Set<string>();
     const isoList = selectedIso3 ? [selectedIso3] : filteredCountries;
@@ -107,16 +115,17 @@ export default function ClientPage({
       const distObj = grouped[iso3];
       if (!distObj) return;
       Object.entries(distObj).forEach(([dist, items]) => {
-        // Filtro por distribuidor
-        if (normalizedDistributor && dist !== normalizedDistributor) return;
+        const distNorm = normalizeStr(dist);
+        if (normalizedDistributor && distNorm !== normalizedDistributor) return;
         items.forEach(({ product }) => {
-          // Filtro por producto
-          if (normalizedProduct && product !== normalizedProduct) return;
-          dSet.add(dist);
-          pSet.add(product);
+          const prodNorm = normalizeStr(product);
+          if (normalizedProduct && prodNorm !== normalizedProduct) return;
+          dSet.add(distNorm);
+          pSet.add(prodNorm);
         });
       });
     });
+
     return { distCount: dSet.size, prodCount: pSet.size };
   }, [
     grouped,
@@ -134,7 +143,7 @@ export default function ClientPage({
         Mapa de autorizaciones
       </h1>
 
-      {/* Distribución: mapa a la izquierda, panel de filtros a la derecha */}
+      {/* Mapa a la izquierda, filtros a la derecha */}
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 320 }}>
           <WorldMap
@@ -153,6 +162,9 @@ export default function ClientPage({
           }}
         >
           <FilterPanel
+            // Aviso: los nombres de estas listas están normalizados (sin tildes y en minúsculas),
+            // por lo que podrían verse diferentes a los originales en el select.
+            // Si quieres conservar la presentación original, adapta FilterPanel para trabajar con pares {normalized, display}.
             uniqueDistributors={uniqueDistributors}
             uniqueProducts={uniqueProducts}
             selectedDistributor={selectedDistributor}
@@ -165,12 +177,13 @@ export default function ClientPage({
         </div>
       </div>
 
-      {/* Listado de países y detalles debajo del mapa */}
+      {/* Listado de países debajo del mapa */}
       <div style={{ marginTop: 20 }}>
         <CountryList
           grouped={grouped}
           iso3ToName={iso3ToName}
           displayCountries={displayCountries}
+          // Pasamos los filtros normalizados para que CountryList los utilice
           selectedDistributor={normalizedDistributor}
           selectedProduct={normalizedProduct}
         />
