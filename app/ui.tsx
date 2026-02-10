@@ -17,17 +17,17 @@ export default function ClientPage({
   countriesWithData: string[];
   iso3ToName: Record<string, string>;
 }) {
-  // Estados para selección de país y filtros
+  // Estados de selección (mapa) y filtros
   const [selectedIso3, setSelectedIso3] = useState<string | null>(null);
   const [selectedDistributor, setSelectedDistributor] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
 
-  // Al cambiar filtros, limpiamos la selección de país
+  // Al cambiar filtros, limpiar selección de país
   useEffect(() => {
     setSelectedIso3(null);
   }, [selectedDistributor, selectedProduct]);
 
-  // Distribuidores únicos globales
+  // Distribuidores únicos (para opciones)
   const uniqueDistributors = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -36,7 +36,7 @@ export default function ClientPage({
     return Array.from(s).sort();
   }, [grouped]);
 
-  // Productos únicos globales
+  // Productos únicos (para opciones)
   const uniqueProducts = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -47,50 +47,71 @@ export default function ClientPage({
     return Array.from(s).sort();
   }, [grouped]);
 
-  // Países que cumplen los filtros (sin tener en cuenta selección en el mapa)
+  /**
+   * Normalizar los valores de los filtros:
+   *  - Si el valor es "", "Todos" o "todos", lo tratamos como sin filtro (cadena vacía).
+   */
+  const normalizedDistributor =
+    !selectedDistributor ||
+    selectedDistributor.toLowerCase() === "todos"
+      ? ""
+      : selectedDistributor;
+  const normalizedProduct =
+    !selectedProduct || selectedProduct.toLowerCase() === "todos"
+      ? ""
+      : selectedProduct;
+
+  // Países que cumplen los filtros normalizados
   const filteredCountries = useMemo(() => {
     return Object.keys(grouped)
       .filter((iso3) => {
         const distObj = grouped[iso3];
         return Object.entries(distObj).some(([dist, items]) => {
-          // Filtro por distribuidor
-          if (selectedDistributor && dist !== selectedDistributor) return false;
-          // Filtro por producto
-          if (selectedProduct) {
-            return items.some((it) => it.product === selectedProduct);
+          // Si hay filtro de distribuidor y no coincide, descartar
+          if (normalizedDistributor && dist !== normalizedDistributor) return false;
+          // Si hay filtro de producto y no aparece en este distribuidor, descartar
+          if (normalizedProduct) {
+            return items.some((it) => it.product === normalizedProduct);
           }
           return true;
         });
       })
       .sort();
-  }, [grouped, selectedDistributor, selectedProduct]);
+  }, [grouped, normalizedDistributor, normalizedProduct]);
 
-  // Países a mostrar en el listado (si hay uno seleccionado, sólo ese)
+  // Países a mostrar: uno (seleccionado) o todos los filtrados
   const displayCountries = useMemo(() => {
     return selectedIso3 ? [selectedIso3] : filteredCountries;
   }, [selectedIso3, filteredCountries]);
 
-  // Recuento dinámico con deduplicación y condición de fallback
+  // Recuento dinámico con deduplicación y fallback a totales globales
   const { distCount, prodCount } = useMemo(() => {
-    // Si no hay ni país seleccionado ni filtros, devolver totales globales
-    if (!selectedIso3 && !selectedDistributor && !selectedProduct) {
+    // Caso sin país seleccionado ni filtros activos: mostrar totales únicos
+    if (
+      !selectedIso3 &&
+      !normalizedDistributor &&
+      !normalizedProduct
+    ) {
       return {
         distCount: uniqueDistributors.length,
         prodCount: uniqueProducts.length,
       };
     }
 
-    // En caso contrario, contar distribuidores y productos únicos en el subconjunto actual
+    // De lo contrario, contar distribuidores y productos únicos en el subconjunto actual
     const dSet = new Set<string>();
     const pSet = new Set<string>();
     const isoList = selectedIso3 ? [selectedIso3] : filteredCountries;
+
     isoList.forEach((iso3) => {
       const distObj = grouped[iso3];
       if (!distObj) return;
       Object.entries(distObj).forEach(([dist, items]) => {
-        if (selectedDistributor && dist !== selectedDistributor) return;
+        // Filtro por distribuidor
+        if (normalizedDistributor && dist !== normalizedDistributor) return;
         items.forEach(({ product }) => {
-          if (selectedProduct && product !== selectedProduct) return;
+          // Filtro por producto
+          if (normalizedProduct && product !== normalizedProduct) return;
           dSet.add(dist);
           pSet.add(product);
         });
@@ -100,8 +121,8 @@ export default function ClientPage({
   }, [
     grouped,
     selectedIso3,
-    selectedDistributor,
-    selectedProduct,
+    normalizedDistributor,
+    normalizedProduct,
     filteredCountries,
     uniqueDistributors.length,
     uniqueProducts.length,
@@ -113,7 +134,7 @@ export default function ClientPage({
         Mapa de autorizaciones
       </h1>
 
-      {/* Mapa a la izquierda y filtros a la derecha */}
+      {/* Distribución: mapa a la izquierda, panel de filtros a la derecha */}
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 320 }}>
           <WorldMap
@@ -144,14 +165,14 @@ export default function ClientPage({
         </div>
       </div>
 
-      {/* Listado de países debajo del mapa */}
+      {/* Listado de países y detalles debajo del mapa */}
       <div style={{ marginTop: 20 }}>
         <CountryList
           grouped={grouped}
           iso3ToName={iso3ToName}
           displayCountries={displayCountries}
-          selectedDistributor={selectedDistributor}
-          selectedProduct={selectedProduct}
+          selectedDistributor={normalizedDistributor}
+          selectedProduct={normalizedProduct}
         />
       </div>
     </main>
