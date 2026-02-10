@@ -16,9 +16,8 @@ function getFeatureBBox(feature: any): [[number, number], [number, number]] | nu
 
   let minLon = Infinity, minLat = Infinity, maxLon = -Infinity, maxLat = -Infinity;
 
-  const visitCoord = (c: any) => {
-    const lon = c?.[0];
-    const lat = c?.[1];
+  const visit = (c: any) => {
+    const lon = c?.[0], lat = c?.[1];
     if (typeof lon !== "number" || typeof lat !== "number") return;
     minLon = Math.min(minLon, lon);
     minLat = Math.min(minLat, lat);
@@ -29,7 +28,7 @@ function getFeatureBBox(feature: any): [[number, number], [number, number]] | nu
   const walk = (coords: any) => {
     if (!coords) return;
     if (typeof coords[0] === "number" && typeof coords[1] === "number") {
-      visitCoord(coords);
+      visit(coords);
       return;
     }
     for (const x of coords) walk(x);
@@ -41,7 +40,6 @@ function getFeatureBBox(feature: any): [[number, number], [number, number]] | nu
   return [[minLon, minLat], [maxLon, maxLat]];
 }
 
-
 export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3 }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [geojson, setGeojson] = useState<any>(null);
@@ -52,12 +50,31 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
         if (!r.ok) throw new Error(`HTTP ${r.status} cargando /countries.geojson`);
         return r.json();
       })
-      .then(setGeojson)
+      .then((g) => {
+        // Normaliza a properties.iso3 (solo A-Z{3}, ignora -99)
+        const candidates = ["ISO3166-1-Alpha-3", "ISO_A3", "ADM0_A3", "iso_a3"];
+        for (const f of g.features || []) {
+          const p = f.properties || {};
+          let iso = "";
+          for (const k of candidates) {
+            const v = p[k];
+            if (typeof v === "string" && /^[A-Z]{3}$/.test(v.toUpperCase())) {
+              iso = v.toUpperCase();
+              break;
+            }
+          }
+          p.iso3 = iso;
+          f.properties = p;
+        }
+        setGeojson(g);
+      })
       .catch((e) => {
         console.error("GeoJSON load error:", e);
         setGeojson(null);
       });
   }, []);
+
+  const isReady = !!geojson;
 
   const countriesSet = useMemo(
     () => new Set(countriesWithData.map((c) => c.toUpperCase())),
@@ -71,13 +88,13 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
       paint: {
         "fill-color": [
           "case",
-          ["in", ["get", "ISO3166-1-Alpha-3"], ["literal", Array.from(countriesSet)]],
+          ["in", ["get", "iso3"], ["literal", Array.from(countriesSet)]],
           "#2E86DE",
           "#D5D8DC",
         ],
         "fill-opacity": [
           "case",
-          ["==", ["get", "ISO3166-1-Alpha-3"], selectedIso3 ?? ""],
+          ["==", ["get", "iso3"], selectedIso3 ?? ""],
           0.75,
           0.25,
         ],
@@ -92,51 +109,54 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
     paint: { "line-color": "#566573", "line-width": 0.6 },
   };
 
+  const getCountryFeatureAtPoint = (point: { x: number; y: number }) => {
+    const map = mapRef.current?.getMap();
+    if (!map || !isReady) return null;
+
+    // Query robusto: consulta todo, filtra por source id "countries"
+    const feats = map.queryRenderedFeatures(point) as any[];
+    const fromCountries = feats.filter((f) => f?.source === "countries");
+
+    // Coge el primero con iso3 válido
+    const fValid = fromCountries.find((f) => /^[A-Z]{3}$/.test(String(f?.properties?.iso3 || "")));
+    return fValid || null;
+  };
+
   return (
     <div className="mapWrap">
       <Map
         ref={mapRef}
         initialViewState={{ longitude: 0, latitude: 20, zoom: 1.6 }}
         mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-      
         onMouseMove={(e) => {
           const map = mapRef.current?.getMap();
-          if (!map) return;
-      
-          const feats = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
-          map.getCanvas().style.cursor = feats.length ? "pointer" : "";
+          if (!map || !isReady) return;
+
+          const f = getCountryFeatureAtPoint(e.point);
+          map.getCanvas().style.cursor = f ? "pointer" : "";
         }}
-      
         onMouseLeave={() => {
           const map = mapRef.current?.getMap();
           if (!map) return;
           map.getCanvas().style.cursor = "";
         }}
-      
         onClick={(e) => {
           const map = mapRef.current?.getMap();
-          if (!map) return;
-      
-          const feats = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
-          const f = feats?.[0] as any;
-          const iso3 = f?.properties?.["ISO3166-1-Alpha-3"];
-          if (!iso3) return;
-      
-          const iso3Up = String(iso3).toUpperCase();
+          if (!map || !isReady) return;
+
+          const f = getCountryFeatureAtPoint(e.point);
+          if (!f) return;
+
+          const iso3Up = String(f.properties.iso3).toUpperCase();
           onSelectIso3(iso3Up);
-      
+
           const bbox = getFeatureBBox(f);
           if (bbox) {
             const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-            map.fitBounds(bbox, {
-              padding: isMobile ? 20 : 60,
-              duration: 900,
-              maxZoom: 5.2,
-            });
+            map.fitBounds(bbox, { padding: isMobile ? 20 : 60, duration: 900, maxZoom: 5.2 });
           }
         }}
       >
-
         {geojson && (
           <Source id="countries" type="geojson" data={geojson}>
             <Layer {...fillLayer} />
@@ -147,12 +167,12 @@ export default function WorldMap({ countriesWithData, selectedIso3, onSelectIso3
 
       <style jsx>{`
         .mapWrap {
+          position: relative;
           height: 52vh;
           min-height: 360px;
           border-radius: 12px;
           overflow: hidden;
           border: 1px solid #e5e7eb;
-          position: relative;
         }
         @media (min-width: 1024px) {
           .mapWrap {
