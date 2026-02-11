@@ -48,18 +48,16 @@ export default function FilterPanel({
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, color: "#6b7280" }}>Producto</div>
         <select
-          value={selectedProduct}
-          onChange={(e) => setSelectedProduct(e.target.value)}
-          style={{ width: "100%", padding: 6, marginTop: 4 }}
+          value={selectedDistributor}
+          onChange={(e) => setSelectedDistributor(e.target.value)}
         >
-          <option value="">— Sin filtro —</option>
-          <option value={ALL}>Todos</option>
-          {uniqueProducts.map((p) => (
-            <option key={p} value={p}>
-              {p}
+          <option value="Todos">Todos</option>
+          {uniqueDistributors.map((d) => (
+            <option key={d} value={d}>
+              {d}
             </option>
-          ))}
-        </select>
+         ))}
+      </select>
       </div>
 
       {/* CONTADORES */}
