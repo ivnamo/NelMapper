@@ -1,6 +1,8 @@
 // components/FilterPanel.tsx
 "use client";
 
+import type React from "react";
+
 export default function FilterPanel({
   uniqueDistributors,
   uniqueProducts,
@@ -14,24 +16,23 @@ export default function FilterPanel({
   uniqueDistributors: string[];
   uniqueProducts: string[];
   selectedDistributor: string;
-  setSelectedDistributor: (s: string) => void;
+  setSelectedDistributor: React.Dispatch<React.SetStateAction<string>>;
   selectedProduct: string;
-  setSelectedProduct: (s: string) => void;
+  setSelectedProduct: React.Dispatch<React.SetStateAction<string>>;
   totalDistributors: number;
   totalProducts: number;
 }) {
   return (
     <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 16 }}>
-      
       {/* DISTRIBUIDOR */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, color: "#6b7280" }}>Distribuidor</div>
         <select
-          value={selectedDistributor}   // ← valor controlado
+          value={selectedDistributor}
           onChange={(e) => setSelectedDistributor(e.target.value)}
           style={{ width: "100%", padding: 6, marginTop: 4 }}
         >
-          <option value="">Todos</option>   {/* ← IMPORTANTE */}
+          <option value="">— Sin filtro —</option>
           {uniqueDistributors.map((d) => (
             <option key={d} value={d}>
               {d}
@@ -48,7 +49,7 @@ export default function FilterPanel({
           onChange={(e) => setSelectedProduct(e.target.value)}
           style={{ width: "100%", padding: 6, marginTop: 4 }}
         >
-          <option value="">Todos</option>   {/* ← IMPORTANTE */}
+          <option value="">— Sin filtro —</option>
           {uniqueProducts.map((p) => (
             <option key={p} value={p}>
               {p}
@@ -61,15 +62,11 @@ export default function FilterPanel({
       <div style={{ display: "flex", gap: 12 }}>
         <div style={{ flex: 1, background: "#f9fafb", borderRadius: 8, padding: 12 }}>
           <div style={{ fontSize: 12, color: "#6b7280" }}>Distribuidores</div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>
-            {totalDistributors}
-          </div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>{totalDistributors}</div>
         </div>
         <div style={{ flex: 1, background: "#f9fafb", borderRadius: 8, padding: 12 }}>
           <div style={{ fontSize: 12, color: "#6b7280" }}>Productos</div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>
-            {totalProducts}
-          </div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>{totalProducts}</div>
         </div>
       </div>
     </div>
