@@ -22,15 +22,16 @@ export default function FilterPanel({
 }) {
   return (
     <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 16 }}>
-      {/* Selector de distribuidor */}
+      
+      {/* DISTRIBUIDOR */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, color: "#6b7280" }}>Distribuidor</div>
         <select
-          value={selectedDistributor}
+          value={selectedDistributor}   // ← valor controlado
           onChange={(e) => setSelectedDistributor(e.target.value)}
           style={{ width: "100%", padding: 6, marginTop: 4 }}
         >
-          <option value="">Todos</option>
+          <option value="">Todos</option>   {/* ← IMPORTANTE */}
           {uniqueDistributors.map((d) => (
             <option key={d} value={d}>
               {d}
@@ -39,7 +40,7 @@ export default function FilterPanel({
         </select>
       </div>
 
-      {/* Selector de producto */}
+      {/* PRODUCTO */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, color: "#6b7280" }}>Producto</div>
         <select
@@ -47,7 +48,7 @@ export default function FilterPanel({
           onChange={(e) => setSelectedProduct(e.target.value)}
           style={{ width: "100%", padding: 6, marginTop: 4 }}
         >
-          <option value="">Todos</option>
+          <option value="">Todos</option>   {/* ← IMPORTANTE */}
           {uniqueProducts.map((p) => (
             <option key={p} value={p}>
               {p}
@@ -56,15 +57,19 @@ export default function FilterPanel({
         </select>
       </div>
 
-      {/* Indicadores (recuento dinámico) */}
+      {/* CONTADORES */}
       <div style={{ display: "flex", gap: 12 }}>
         <div style={{ flex: 1, background: "#f9fafb", borderRadius: 8, padding: 12 }}>
           <div style={{ fontSize: 12, color: "#6b7280" }}>Distribuidores</div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>{totalDistributors}</div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>
+            {totalDistributors}
+          </div>
         </div>
         <div style={{ flex: 1, background: "#f9fafb", borderRadius: 8, padding: 12 }}>
           <div style={{ fontSize: 12, color: "#6b7280" }}>Productos</div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>{totalProducts}</div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>
+            {totalProducts}
+          </div>
         </div>
       </div>
     </div>
