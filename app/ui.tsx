@@ -17,17 +17,19 @@ export default function ClientPage({
   countriesWithData: string[];
   iso3ToName: Record<string, string>;
 }) {
-  // Estado de selección para país (clicado en el mapa) y filtros
+  // País seleccionado en el mapa
   const [selectedIso3, setSelectedIso3] = useState<string | null>(null);
+
+  // Filtros inicializados vacíos (no aplican filtro)
   const [selectedDistributor, setSelectedDistributor] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
 
-  // Al cambiar los filtros, limpiamos la selección de país
+  // Al cambiar filtros, quitar la selección del mapa
   useEffect(() => {
     setSelectedIso3(null);
   }, [selectedDistributor, selectedProduct]);
 
-  // Lista de distribuidores únicos (sin normalización)
+  // Distribuidores únicos
   const uniqueDistributors = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -36,7 +38,7 @@ export default function ClientPage({
     return Array.from(s).sort();
   }, [grouped]);
 
-  // Lista de productos únicos (sin normalización)
+  // Productos únicos
   const uniqueProducts = useMemo(() => {
     const s = new Set<string>();
     Object.values(grouped).forEach((distObj) => {
@@ -47,50 +49,41 @@ export default function ClientPage({
     return Array.from(s).sort();
   }, [grouped]);
 
-  // Interpretamos cadenas vacías o "todos"/"Todos" como ausencia de filtro
-  const normalizedDistributor =
-    !selectedDistributor || selectedDistributor.toLowerCase() === "todos"
-      ? ""
-      : selectedDistributor;
-  const normalizedProduct =
-    !selectedProduct || selectedProduct.toLowerCase() === "todos"
-      ? ""
-      : selectedProduct;
-
-  // Países que cumplen con los filtros
+  // Países que cumplen filtros (distribuidor y producto)
   const filteredCountries = useMemo(() => {
     return Object.keys(grouped)
       .filter((iso3) => {
         const distObj = grouped[iso3];
+        // Debe haber al menos un distribuidor que cumpla
         return Object.entries(distObj).some(([dist, items]) => {
-          // Aplicar filtro de distribuidor
-          if (normalizedDistributor && dist !== normalizedDistributor) return false;
-          // Aplicar filtro de producto
-          if (normalizedProduct) {
-            return items.some((it) => it.product === normalizedProduct);
+          // Filtrar por distribuidor
+          if (selectedDistributor && dist !== selectedDistributor) return false;
+          // Filtrar por producto
+          if (selectedProduct) {
+            return items.some((it) => it.product === selectedProduct);
           }
           return true;
         });
       })
       .sort();
-  }, [grouped, normalizedDistributor, normalizedProduct]);
+  }, [grouped, selectedDistributor, selectedProduct]);
 
-  // Países a mostrar en la lista: si se selecciona un país, sólo ese; si no, todos los filtrados
+  // Países a mostrar: uno si está seleccionado, o todos los filtrados
   const displayCountries = useMemo(() => {
     return selectedIso3 ? [selectedIso3] : filteredCountries;
   }, [selectedIso3, filteredCountries]);
 
   // Recuento dinámico de distribuidores y productos
   const { distCount, prodCount } = useMemo(() => {
-    // Si no hay país seleccionado ni filtros activos, devolvemos los valores globales
-    if (!selectedIso3 && !normalizedDistributor && !normalizedProduct) {
+    // Sin filtros y sin país seleccionado → usar los totales globales
+    if (!selectedIso3 && !selectedDistributor && !selectedProduct) {
       return {
         distCount: uniqueDistributors.length,
         prodCount: uniqueProducts.length,
       };
     }
 
-    // En cualquier otro caso, contamos los distribuidores y productos únicos en el subconjunto actual
+    // Con filtros o país seleccionado → deduplicar en el subconjunto
     const distSet = new Set<string>();
     const prodSet = new Set<string>();
     const isoList = selectedIso3 ? [selectedIso3] : filteredCountries;
@@ -98,22 +91,30 @@ export default function ClientPage({
     isoList.forEach((iso3) => {
       const distObj = grouped[iso3];
       if (!distObj) return;
+
       Object.entries(distObj).forEach(([dist, items]) => {
-        if (normalizedDistributor && dist !== normalizedDistributor) return;
+        // Aplicar filtro por distribuidor
+        if (selectedDistributor && dist !== selectedDistributor) return;
+
         items.forEach(({ product }) => {
-          if (normalizedProduct && product !== normalizedProduct) return;
+          // Aplicar filtro por producto
+          if (selectedProduct && product !== selectedProduct) return;
+
           distSet.add(dist);
           prodSet.add(product);
         });
       });
     });
 
-    return { distCount: distSet.size, prodCount: prodSet.size };
+    return {
+      distCount: distSet.size,
+      prodCount: prodSet.size,
+    };
   }, [
     grouped,
     selectedIso3,
-    normalizedDistributor,
-    normalizedProduct,
+    selectedDistributor,
+    selectedProduct,
     filteredCountries,
     uniqueDistributors.length,
     uniqueProducts.length,
@@ -121,11 +122,8 @@ export default function ClientPage({
 
   return (
     <main style={{ padding: 16 }}>
-      <h1 style={{ margin: 0, marginBottom: 12, fontSize: 28 }}>
-        Mapa de autorizaciones
-      </h1>
+      <h1 style={{ marginBottom: 16 }}>Mapa de autorizaciones</h1>
 
-      {/* Distribución de la página: mapa a la izquierda, filtros a la derecha */}
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 320 }}>
           <WorldMap
@@ -134,15 +132,8 @@ export default function ClientPage({
             onSelectIso3={setSelectedIso3}
           />
         </div>
-        <div
-          style={{
-            width: 380,
-            minWidth: 280,
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-          }}
-        >
+
+        <div style={{ width: 380, minWidth: 280 }}>
           <FilterPanel
             uniqueDistributors={uniqueDistributors}
             uniqueProducts={uniqueProducts}
@@ -156,14 +147,13 @@ export default function ClientPage({
         </div>
       </div>
 
-      {/* Listado de países y detalles, debajo del mapa */}
       <div style={{ marginTop: 20 }}>
         <CountryList
           grouped={grouped}
           iso3ToName={iso3ToName}
           displayCountries={displayCountries}
-          selectedDistributor={normalizedDistributor}
-          selectedProduct={normalizedProduct}
+          selectedDistributor={selectedDistributor}
+          selectedProduct={selectedProduct}
         />
       </div>
     </main>
