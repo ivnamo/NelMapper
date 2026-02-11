@@ -8,6 +8,8 @@ import CountryList from "@/components/CountryList";
 
 type Grouped = Record<string, Record<string, { product: string; category: string }[]>>;
 
+const ALL = "__ALL__"; // sentinela para "Todos"
+
 export default function ClientPage({
   grouped,
   countriesWithData,
@@ -20,11 +22,16 @@ export default function ClientPage({
   // País seleccionado en el mapa
   const [selectedIso3, setSelectedIso3] = useState<string | null>(null);
 
-  // Filtros inicializados vacíos (no aplican filtro)
-  const [selectedDistributor, setSelectedDistributor] = useState<string>("");
-  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  /**
+   * Filtros:
+   *  - ""        => — Sin filtro — (NINGUNO)
+   *  - "__ALL__" => Todos
+   *  - otro      => valor específico
+   */
+  const [selectedDistributor, setSelectedDistributor] = useState<string>(ALL);
+  const [selectedProduct, setSelectedProduct] = useState<string>(ALL);
 
-  // Al cambiar filtros, quitar la selección del mapa
+  // Si cambian los filtros, quitamos selección del mapa
   useEffect(() => {
     setSelectedIso3(null);
   }, [selectedDistributor, selectedProduct]);
@@ -49,43 +56,70 @@ export default function ClientPage({
     return Array.from(s).sort();
   }, [grouped]);
 
-  // Países que cumplen filtros (distribuidor y producto)
+  // Modos
+  const distNone = selectedDistributor === "";
+  const prodNone = selectedProduct === "";
+  const distAll = selectedDistributor === ALL;
+  const prodAll = selectedProduct === ALL;
+
+  // Filtros efectivos (null = sin restricción)
+  const distFilter: string | null = distAll ? null : distNone ? "__NONE__" : selectedDistributor;
+  const prodFilter: string | null = prodAll ? null : prodNone ? "__NONE__" : selectedProduct;
+
+  /**
+   * Si alguno está en "— Sin filtro —" => NINGUNO
+   * (no hay países resaltados, ni lista)
+   */
+  const showNone = distNone || prodNone;
+
+  // Países que cumplen filtros (para colorear en el mapa)
   const filteredCountries = useMemo(() => {
+    if (showNone) return [];
+
     return Object.keys(grouped)
       .filter((iso3) => {
         const distObj = grouped[iso3];
-        // Debe haber al menos un distribuidor que cumpla
+
         return Object.entries(distObj).some(([dist, items]) => {
-          // Filtrar por distribuidor
-          if (selectedDistributor && dist !== selectedDistributor) return false;
-          // Filtrar por producto
-          if (selectedProduct) {
-            return items.some((it) => it.product === selectedProduct);
+          // Filtro distribuidor si aplica
+          if (distFilter && dist !== distFilter) return false;
+
+          // Filtro producto si aplica
+          if (prodFilter) {
+            return items.some((it) => it.product === prodFilter);
           }
+
+          // Si no hay filtro de producto, cualquier item vale
           return true;
         });
       })
       .sort();
-  }, [grouped, selectedDistributor, selectedProduct]);
+  }, [grouped, showNone, distFilter, prodFilter]);
 
-  // Países a mostrar: uno si está seleccionado, o todos los filtrados
+  // Países a mostrar en la lista (si hay seleccionado en mapa, solo ese; si no, los filtrados)
   const displayCountries = useMemo(() => {
+    if (showNone) return [];
     return selectedIso3 ? [selectedIso3] : filteredCountries;
-  }, [selectedIso3, filteredCountries]);
+  }, [showNone, selectedIso3, filteredCountries]);
 
-  // Recuento dinámico de distribuidores y productos
+  // Contadores dinámicos
   const { distCount, prodCount } = useMemo(() => {
-    // Sin filtros y sin país seleccionado → usar los totales globales
-    if (!selectedIso3 && !selectedDistributor && !selectedProduct) {
+    if (showNone) {
+      return { distCount: 0, prodCount: 0 };
+    }
+
+    // Caso "Todos / Todos" y sin país seleccionado: totales globales
+    if (!selectedIso3 && distAll && prodAll) {
       return {
         distCount: uniqueDistributors.length,
         prodCount: uniqueProducts.length,
       };
     }
 
-    // Con filtros o país seleccionado → deduplicar en el subconjunto
+    // Subconjunto: deduplicar sobre países visibles
     const distSet = new Set<string>();
     const prodSet = new Set<string>();
+
     const isoList = selectedIso3 ? [selectedIso3] : filteredCountries;
 
     isoList.forEach((iso3) => {
@@ -93,32 +127,34 @@ export default function ClientPage({
       if (!distObj) return;
 
       Object.entries(distObj).forEach(([dist, items]) => {
-        // Aplicar filtro por distribuidor
-        if (selectedDistributor && dist !== selectedDistributor) return;
+        if (distFilter && dist !== distFilter) return;
 
         items.forEach(({ product }) => {
-          // Aplicar filtro por producto
-          if (selectedProduct && product !== selectedProduct) return;
-
+          if (prodFilter && product !== prodFilter) return;
           distSet.add(dist);
           prodSet.add(product);
         });
       });
     });
 
-    return {
-      distCount: distSet.size,
-      prodCount: prodSet.size,
-    };
+    return { distCount: distSet.size, prodCount: prodSet.size };
   }, [
     grouped,
+    showNone,
     selectedIso3,
-    selectedDistributor,
-    selectedProduct,
+    distAll,
+    prodAll,
+    distFilter,
+    prodFilter,
     filteredCountries,
     uniqueDistributors.length,
     uniqueProducts.length,
   ]);
+
+  // Lo que se pinta en el mapa:
+  // - si showNone => []
+  // - si no => países filtrados
+  const countriesForMap = showNone ? [] : filteredCountries;
 
   return (
     <main style={{ padding: 16 }}>
@@ -127,7 +163,7 @@ export default function ClientPage({
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 320 }}>
           <WorldMap
-            countriesWithData={filteredCountries}
+            countriesWithData={countriesForMap}
             selectedIso3={selectedIso3}
             onSelectIso3={setSelectedIso3}
           />
@@ -152,8 +188,9 @@ export default function ClientPage({
           grouped={grouped}
           iso3ToName={iso3ToName}
           displayCountries={displayCountries}
-          selectedDistributor={selectedDistributor}
-          selectedProduct={selectedProduct}
+          // OJO: a CountryList le pasamos filtros reales ("" no tiene sentido aquí; showNone ya lo controla)
+          selectedDistributor={distAll ? "" : distNone ? "" : selectedDistributor}
+          selectedProduct={prodAll ? "" : prodNone ? "" : selectedProduct}
         />
       </div>
     </main>
