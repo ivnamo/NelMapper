@@ -3,6 +3,8 @@
 
 import type React from "react";
 
+const ALL = "__ALL__";
+
 export default function FilterPanel({
   uniqueDistributors,
   uniqueProducts,
@@ -33,6 +35,7 @@ export default function FilterPanel({
           style={{ width: "100%", padding: 6, marginTop: 4 }}
         >
           <option value="">— Sin filtro —</option>
+          <option value={ALL}>Todos</option>
           {uniqueDistributors.map((d) => (
             <option key={d} value={d}>
               {d}
@@ -50,6 +53,7 @@ export default function FilterPanel({
           style={{ width: "100%", padding: 6, marginTop: 4 }}
         >
           <option value="">— Sin filtro —</option>
+          <option value={ALL}>Todos</option>
           {uniqueProducts.map((p) => (
             <option key={p} value={p}>
               {p}
