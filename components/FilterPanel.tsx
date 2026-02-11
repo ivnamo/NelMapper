@@ -1,77 +1,155 @@
-// components/FilterPanel.tsx
+// app/ui.tsx
 "use client";
 
-export default function FilterPanel({
-  uniqueDistributors,
-  uniqueProducts,
-  selectedDistributor,
-  setSelectedDistributor,
-  selectedProduct,
-  setSelectedProduct,
-  totalDistributors,
-  totalProducts,
+import { useState, useMemo, useEffect } from "react";
+import WorldMap from "@/components/WorldMap";
+import FilterPanel from "@/components/FilterPanel";
+import CountryList from "@/components/CountryList";
+
+type Grouped = Record<string, Record<string, { product: string; category: string }[]>>;
+
+export default function ClientPage({
+  grouped,
+  countriesWithData,
+  iso3ToName,
 }: {
-  uniqueDistributors: string[];
-  uniqueProducts: string[];
-  selectedDistributor: string;
-  setSelectedDistributor: (s: string) => void;
-  selectedProduct: string;
-  setSelectedProduct: (s: string) => void;
-  totalDistributors: number;
-  totalProducts: number;
+  grouped: Grouped;
+  countriesWithData: string[];
+  iso3ToName: Record<string, string>;
 }) {
+  // País seleccionado en el mapa
+  const [selectedIso3, setSelectedIso3] = useState<string | null>(null);
+
+  // Filtros inicializados VACÍOS
+  const [selectedDistributor, setSelectedDistributor] = useState<string>("");
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+
+  // Si cambian los filtros, quitamos selección del mapa
+  useEffect(() => {
+    setSelectedIso3(null);
+  }, [selectedDistributor, selectedProduct]);
+
+  // Distribuidores únicos
+  const uniqueDistributors = useMemo(() => {
+    const s = new Set<string>();
+    Object.values(grouped).forEach((distObj) => {
+      Object.keys(distObj).forEach((dist) => s.add(dist));
+    });
+    return Array.from(s).sort();
+  }, [grouped]);
+
+  // Productos únicos
+  const uniqueProducts = useMemo(() => {
+    const s = new Set<string>();
+    Object.values(grouped).forEach((distObj) => {
+      Object.values(distObj).forEach((items) => {
+        items.forEach(({ product }) => s.add(product));
+      });
+    });
+    return Array.from(s).sort();
+  }, [grouped]);
+
+  // Países que cumplen filtros
+  const filteredCountries = useMemo(() => {
+    return Object.keys(grouped)
+      .filter((iso3) => {
+        const distObj = grouped[iso3];
+
+        return Object.entries(distObj).some(([dist, items]) => {
+          if (selectedDistributor && dist !== selectedDistributor) return false;
+
+          if (selectedProduct) {
+            return items.some((it) => it.product === selectedProduct);
+          }
+
+          return true;
+        });
+      })
+      .sort();
+  }, [grouped, selectedDistributor, selectedProduct]);
+
+  // Países a mostrar en la lista
+  const displayCountries = useMemo(() => {
+    return selectedIso3 ? [selectedIso3] : filteredCountries;
+  }, [selectedIso3, filteredCountries]);
+
+  // Contadores dinámicos
+  const { distCount, prodCount } = useMemo(() => {
+    // SIN FILTROS Y SIN PAÍS SELECCIONADO
+    if (!selectedIso3 && !selectedDistributor && !selectedProduct) {
+      return {
+        distCount: uniqueDistributors.length,
+        prodCount: uniqueProducts.length,
+      };
+    }
+
+    const distSet = new Set<string>();
+    const prodSet = new Set<string>();
+    const isoList = selectedIso3 ? [selectedIso3] : filteredCountries;
+
+    isoList.forEach((iso3) => {
+      const distObj = grouped[iso3];
+      if (!distObj) return;
+
+      Object.entries(distObj).forEach(([dist, items]) => {
+        if (selectedDistributor && dist !== selectedDistributor) return;
+
+        items.forEach(({ product }) => {
+          if (selectedProduct && product !== selectedProduct) return;
+
+          distSet.add(dist);
+          prodSet.add(product);
+        });
+      });
+    });
+
+    return { distCount: distSet.size, prodCount: prodSet.size };
+  }, [
+    grouped,
+    selectedIso3,
+    selectedDistributor,
+    selectedProduct,
+    filteredCountries,
+    uniqueDistributors.length,
+    uniqueProducts.length,
+  ]);
+
   return (
-    <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 16 }}>
-      
-      {/* DISTRIBUIDOR */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 14, color: "#6b7280" }}>Distribuidor</div>
-        <select
-          value={selectedDistributor}   // ← valor controlado
-          onChange={(e) => setSelectedDistributor(e.target.value)}
-          style={{ width: "100%", padding: 6, marginTop: 4 }}
-        >
-          <option value="">Todos</option>   {/* ← IMPORTANTE */}
-          {uniqueDistributors.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-      </div>
+    <main style={{ padding: 16 }}>
+      <h1 style={{ marginBottom: 16 }}>Mapa de autorizaciones</h1>
 
-      {/* PRODUCTO */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 14, color: "#6b7280" }}>Producto</div>
-        <select
-          value={selectedProduct}
-          onChange={(e) => setSelectedProduct(e.target.value)}
-          style={{ width: "100%", padding: 6, marginTop: 4 }}
-        >
-          <option value="">Todos</option>   {/* ← IMPORTANTE */}
-          {uniqueProducts.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* CONTADORES */}
-      <div style={{ display: "flex", gap: 12 }}>
-        <div style={{ flex: 1, background: "#f9fafb", borderRadius: 8, padding: 12 }}>
-          <div style={{ fontSize: 12, color: "#6b7280" }}>Distribuidores</div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>
-            {totalDistributors}
-          </div>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 320 }}>
+          <WorldMap
+            countriesWithData={filteredCountries}
+            selectedIso3={selectedIso3}
+            onSelectIso3={setSelectedIso3}
+          />
         </div>
-        <div style={{ flex: 1, background: "#f9fafb", borderRadius: 8, padding: 12 }}>
-          <div style={{ fontSize: 12, color: "#6b7280" }}>Productos</div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>
-            {totalProducts}
-          </div>
+
+        <div style={{ width: 380, minWidth: 280 }}>
+          <FilterPanel
+            uniqueDistributors={uniqueDistributors}
+            uniqueProducts={uniqueProducts}
+            selectedDistributor={selectedDistributor}
+            setSelectedDistributor={setSelectedDistributor}
+            selectedProduct={selectedProduct}
+            setSelectedProduct={setSelectedProduct}
+            totalDistributors={distCount}
+            totalProducts={prodCount}
+          />
         </div>
       </div>
-    </div>
+
+      <div style={{ marginTop: 20 }}>
+        <CountryList
+          grouped={grouped}
+          iso3ToName={iso3ToName}
+          displayCountries={displayCountries}
+          selectedDistributor={selectedDistributor}
+          selectedProduct={selectedProduct}
+        />
+      </div>
+    </main>
   );
 }
